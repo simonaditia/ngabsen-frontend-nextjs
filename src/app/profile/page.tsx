@@ -4,8 +4,35 @@ import { useState, useRef, useEffect } from "react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { listenFCMMessages } from "@/firebase/firebaseInit";
+import { requestDeviceToken } from "@/firebase/firebaseInit";
 
 export default function ProfilePage() {
+  const [notifError, setNotifError] = useState("");
+  useEffect(() => {
+    async function registerDeviceToken() {
+      const token = await requestDeviceToken();
+      if (token) {
+        // Kirim deviceToken ke backend
+        try {
+          await api.post("/employees/device-token", { deviceToken: token });
+          console.log("Device token sent to backend:", token);
+        } catch (err) {
+          setNotifError("Gagal mengirim device token ke backend.");
+          console.error("Failed to send device token:", err);
+        }
+      } else {
+        setNotifError("Izin notifikasi browser diblokir atau gagal mendapatkan device token. Aktifkan notifikasi di browser!");
+        console.warn("No device token received from FCM");
+      }
+    }
+    registerDeviceToken();
+  }, []);
+  useEffect(() => {
+    listenFCMMessages((payload) => {
+      console.log("FCM message received:", payload);
+    });
+  }, []);
   const router = useRouter();
   const { user, loading } = useAuthGuard();
   useEffect(() => {
@@ -85,6 +112,11 @@ export default function ProfilePage() {
   return (
     <div className="max-w-xl mx-auto p-8">
       <h1 className="text-2xl font-bold mb-4">Profile</h1>
+      {notifError && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+          {notifError}
+        </div>
+      )}
       <div className="bg-white rounded shadow p-6 flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <img

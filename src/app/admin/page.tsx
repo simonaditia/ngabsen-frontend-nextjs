@@ -1,12 +1,45 @@
 
 "use client";
 import { useEffect } from "react";
+import { useState } from "react";
 import { useAdminEmployees } from "@/hooks/useAdminEmployees";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRouter } from "next/navigation";
+import { requestDeviceToken, listenFCMMessages } from "@/firebase/firebaseInit";
 
 export default function AdminDashboard() {
+  const [notif, setNotif] = useState("");
+  useEffect(() => {
+    async function registerDeviceToken() {
+      const token = await requestDeviceToken();
+      const accessToken = localStorage.getItem("access_token");
+      if (token && accessToken) {
+        try {
+          await fetch("http://localhost:3000/employees/device-token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ deviceToken: token })
+          });
+          console.log("Device token admin sent to backend:", token);
+        } catch (err) {
+          setNotif("Gagal mengirim device token admin ke backend.");
+        }
+      } else if (!token) {
+        setNotif("Izin notifikasi browser diblokir atau gagal mendapatkan device token admin. Aktifkan notifikasi di browser!");
+      } else {
+        setNotif("Akses token tidak ditemukan. Silakan login ulang sebagai admin.");
+      }
+    }
+    registerDeviceToken();
+    listenFCMMessages((payload) => {
+      setNotif(payload?.notification?.title || "Ada notifikasi baru!");
+      console.log("FCM message received (admin):", payload);
+    });
+  }, []);
   const router = useRouter();
   const { user, loading } = useAuthGuard();
   useEffect(() => {
@@ -36,6 +69,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {notif && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow z-50">
+          {notif}
+        </div>
+      )}
       <header className="bg-blue-800 text-white p-4 flex justify-between items-center">
         <span className="font-bold">Admin Dashboard</span>
         <button className="bg-red-600 px-3 py-1 rounded text-white" onClick={handleLogout}>Logout</button>
