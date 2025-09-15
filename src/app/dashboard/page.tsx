@@ -5,20 +5,29 @@ import { useTodayAttendance } from "@/hooks/useTodayAttendance";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useEffect } from "react";
 import { useState } from "react";
+import ProfilePhoto from "@/components/ProfilePhoto";
+import { useProfile } from "@/hooks/useProfile";
 import api from "@/services/api";
 
 export default function DashboardPage() {
+  // ...existing code...
   const router = useRouter();
-  const { user, loading } = useAuthGuard();
+  const [profileReloadKey, setProfileReloadKey] = useState(0);
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.replace("/login");
-      } else if (user.role !== "staff") {
-        router.replace("/admin");
-      }
+    // Setiap kali dashboard dibuka, reload profile agar foto terbaru
+    setProfileReloadKey((k) => k + 1);
+  }, []);
+  const { profile, loading: profileLoading, error: profileError } = useProfile(profileReloadKey);
+  useEffect(() => {
+    if (profileLoading) return;
+    if (profileError === "Gagal mengambil profile") {
+      router.replace("/login");
+      return;
     }
-  }, [user, loading, router]);
+    if (profile && profile.role !== "staff") {
+      router.replace("/admin");
+    }
+  }, [profile, profileLoading, profileError, router]);
 
   const [refresh, setRefresh] = useState(0);
   const { data, loading: attendanceLoading, error } = useTodayAttendance(refresh);
@@ -76,21 +85,26 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (profileLoading) return <div className="p-8 text-center">Loading...</div>;
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-blue-600 text-white p-4 flex justify-between items-center">
         <span className="font-bold">Dashboard</span>
         <div className="flex items-center gap-2">
-          <span>{user?.name}</span>
+    <span>{profile?.name}</span>
           <button className="bg-red-600 px-3 py-1 rounded text-white" onClick={handleLogout}>Logout</button>
         </div>
       </header>
       <main className="flex-1 p-8">
-        <h2 className="text-xl font-semibold mb-4">Selamat datang, {user?.name}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <a href="/profile" className="bg-white p-4 rounded shadow hover:bg-blue-50">Profile</a>
-          <a href="/summary" className="bg-white p-4 rounded shadow hover:bg-blue-50">Summary</a>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold mb-2">Selamat datang, {profile?.name}</h2>
+          <ProfilePhoto
+            photoUrl={profile?.photoUrl || "https://upload.wikimedia.org/wikipedia/commons/f/fd/Mysterious_profile_%282013%3B_cropped_2023%29.jpg" } //|| "/next.svg"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <a href="/profile" className="bg-blue-50 p-4 rounded shadow hover:bg-blue-100 flex items-center justify-center">Profile</a>
+          <a href="/summary" className="bg-blue-50 p-4 rounded shadow hover:bg-blue-100 flex items-center justify-center">Summary</a>
         </div>
         <div className="mt-8 bg-white rounded shadow p-6 max-w-md mx-auto">
           <h3 className="text-lg font-bold mb-2">Attendance Hari Ini</h3>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { listenFCMMessages } from "@/firebase/firebaseInit";
 import { requestDeviceToken } from "@/firebase/firebaseInit";
+import ProfilePhoto from "@/components/ProfilePhoto";
 
 export default function ProfilePage() {
   const [notifError, setNotifError] = useState("");
@@ -44,12 +45,13 @@ export default function ProfilePage() {
       }
     }
   }, [user, loading, router]);
-  const { profile, loading: profileLoading, error } = useProfile();
+  const { profile, loading: profileLoading, error } = useProfile(0);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [errorEdit, setErrorEdit] = useState("");
   const [successEdit, setSuccessEdit] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,11 +75,27 @@ export default function ProfilePage() {
     return "";
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhoto(file);
-      setPhotoPreview(URL.createObjectURL(file));
+  const handlePhotoChange = async (file: File) => {
+    setUploadingPhoto(true);
+    setPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.patch("/employees/profile-photo", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      const photoUrl = (res.data && typeof res.data === "object" && "photoUrl" in res.data) ? (res.data as any).photoUrl : undefined;
+      if (photoUrl) {
+        setPhotoPreview(photoUrl);
+        setSuccessEdit("Foto profile berhasil diupdate!");
+      }
+    } catch {
+      setErrorEdit("Gagal upload foto profile");
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -118,28 +136,15 @@ export default function ProfilePage() {
         </div>
       )}
       <div className="bg-white rounded shadow p-6 flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <img
-            src={photoPreview}
-            alt="Profile"
-            className="w-20 h-20 rounded-full object-cover"
-          />
-          <button
-            className="bg-gray-200 px-2 py-1 rounded text-sm"
-            onClick={() => fileInputRef.current?.click()}
-          >Edit Photo</button>
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            onChange={handlePhotoChange}
-          />
-          <div>
-            <div className="font-semibold text-lg">{profile?.name}</div>
-            <div className="text-gray-500">{profile?.email}</div>
-            <div className="text-gray-500">{profile?.position}</div>
-          </div>
+        <ProfilePhoto
+          photoUrl={photoPreview || profile?.photoUrl || "https://upload.wikimedia.org/wikipedia/commons/f/fd/Mysterious_profile_%282013%3B_cropped_2023%29.jpg" } //|| "/next.svg"
+          onPhotoChange={handlePhotoChange}
+          loading={uploadingPhoto}
+        />
+        <div>
+          <div className="font-semibold text-lg">{profile?.name}</div>
+          <div className="text-gray-500">{profile?.email}</div>
+          <div className="text-gray-500">{profile?.position}</div>
         </div>
         <div>
           <label className="block font-medium">Phone</label>

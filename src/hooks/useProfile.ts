@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/services/api";
 
-export function useProfile() {
+export function useProfile(profileReloadKey: number) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
