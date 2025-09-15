@@ -9,12 +9,14 @@ Aplikasi absensi karyawan WFH dengan dashboard admin monitoring, notifikasi real
 - Notifikasi push via Firebase Cloud Messaging (FCM)
 - Proteksi route & validasi input
 - Export data ke CSV
+- Upload Photo to Cloud
 
 ## Teknologi
 - Next.js (App Router, TypeScript)
 - Tailwind CSS
 - Axios
 - Firebase Cloud Messaging
+- Cloudinary
 
 ## Instalasi
 1. Clone repo ini
