@@ -3,19 +3,24 @@ import { useState } from "react";
 import { useAdminEmployees } from "@/hooks/useAdminEmployees";
 import { useEffect } from "react";
 import api from "@/services/api";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useRouter } from "next/navigation";
 
 export default function EmployeesPage() {
-  // Proteksi: hanya admin yang bisa akses
-  const { user } = require("@/contexts/AuthContext").useAuth();
-  const router = require("next/navigation").useRouter();
-  require("react").useEffect(() => {
-    if (user && user.role !== "admin") {
-      router.replace("/dashboard");
+  const router = useRouter();
+  const { user, loading } = useAuthGuard();
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "admin") {
+        router.replace("/dashboard");
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
   // ...existing code...
   const [refresh, setRefresh] = useState(0);
-  const { employees, loading, error } = useAdminEmployees(refresh);
+  const { employees, loading: employeesLoading, error } = useAdminEmployees(refresh);
   const [editId, setEditId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
   const [saving, setSaving] = useState(false);
@@ -43,7 +48,7 @@ export default function EmployeesPage() {
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-2xl font-bold mb-4">Employee Management</h1>
-      {loading && <div>Loading...</div>}
+  {employeesLoading && <div>Loading...</div>}
       {error && <div className="text-red-500">{error}</div>}
       <table className="w-full border text-sm mb-4">
         <thead>

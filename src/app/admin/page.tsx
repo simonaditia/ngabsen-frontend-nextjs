@@ -3,18 +3,21 @@
 import { useEffect } from "react";
 import { useAdminEmployees } from "@/hooks/useAdminEmployees";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
   const router = useRouter();
-  // Proteksi: hanya admin yang bisa akses
+  const { user, loading } = useAuthGuard();
   useEffect(() => {
-    if (user && user.role !== "admin") {
-      router.replace("/dashboard");
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "admin") {
+        router.replace("/dashboard");
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
   const { employees, loading: loadingEmp } = useAdminEmployees();
   const today = new Date();
@@ -27,8 +30,8 @@ export default function AdminDashboard() {
   const { data: attendance, loading: loadingAtt } = useAdminAttendance("", startDate, endDate);
 
   const handleLogout = () => {
-    logout();
-    router.replace("/login");
+  localStorage.removeItem("access_token");
+  window.location.replace("/login");
   };
 
   return (

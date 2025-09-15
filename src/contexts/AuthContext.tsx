@@ -27,41 +27,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // useEffect(() => {
-  //   setLoading(true);
-  //   const token = localStorage.getItem(TOKEN_KEY);
-  //   if (token) {
-  //     api.get("/employees/profile")
-  //       .then(res => setUser(res.data as User))
-  //       .catch((err) => {
-  //         setUser(null);
-  //         console.error("Gagal fetch profile saat reload", err);
-  //       })
-  //       .then(() => setLoading(false));
-  //   } else {
-  //     setLoading(false);
-  //   }
-  // }, []);
-
   useEffect(() => {
-  setLoading(true);
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (token) {
-    api.get("/employees/profile", { headers: { 'Cache-Control': 'no-cache' } })
-      .then(res => {
-        console.log("Profile response:", res.data);
-        setUser(res.data as User);
-        console.log("User context set:", res.data);
+    setLoading(true);
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      api.get("/employees/profile", {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Authorization': `Bearer ${token}`,
+        }
       })
-      .catch((err) => {
-        setUser(null);
-        console.error("Gagal fetch profile saat reload", err);
-      })
-      .then(() => setLoading(false));
-  } else {
-    setLoading(false);
-  }
-}, []);
+        .then(res => {
+          console.log("Profile response:", res.data);
+          setUser(res.data as User);
+          console.log("User context set:", res.data);
+        })
+        .catch((err) => {
+          setUser(null);
+          console.error("Gagal fetch profile saat reload", err);
+        })
+        .then(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -74,7 +63,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       // Setelah login, fetch profile
       try {
-        const profileRes = await api.get("/employees/profile");
+        const profileRes = await api.get("/employees/profile", {
+          headers: {
+            'Authorization': `Bearer ${data.access_token}`,
+          }
+        });
         setUser(profileRes.data as User);
       } catch (err) {
         setUser(null);

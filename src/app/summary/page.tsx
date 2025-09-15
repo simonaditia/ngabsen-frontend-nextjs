@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+import { saveAs } from "file-saver";
 import { useAttendance } from "@/hooks/useAttendance";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRouter } from "next/navigation";
 
 const dummySummary = [
@@ -15,17 +16,28 @@ const dummySummary = [
   // ...data lain
 ];
 
+const calculateTotalHours = (clockIn: string, clockOut: string) => {
+  if (!clockIn || !clockOut) return "";
+  const start = new Date(clockIn);
+  const end = new Date(clockOut);
+  const diffMs = end.getTime() - start.getTime(); // selisih ms
+  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60)); // jam
+  const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)); // menit
+  return `${diffHrs}h ${diffMins}m`;
+};
+
 export default function SummaryPage() {
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  // Proteksi: hanya staff yang bisa akses
+  const { user, loading } = useAuthGuard();
   useEffect(() => {
-    if (user && user.role !== "staff") {
-      router.replace("/admin");
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "staff") {
+        router.replace("/admin");
+      }
     }
-  }, [user, router]);
-  console.log("user before: ", user)
-  console.log("user after: ", user)
+  }, [user, loading, router]);
   
     const [startDate, setStartDate] = useState(() => {
     const now = new Date();
@@ -43,10 +55,10 @@ export default function SummaryPage() {
     return endOfMonth.toLocaleDateString('en-CA');
 });
 
-  const { data, loading, error } = useAttendance(startDate, endDate);
+  const { data, loading: attendanceLoading, error } = useAttendance(startDate, endDate);
 
 
-   if (authLoading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   return (
     <div className="max-w-3xl mx-auto p-8">
@@ -66,7 +78,7 @@ export default function SummaryPage() {
             className="border p-2 rounded"
           />
         </div>
-        {loading && <div className="text-center">Loading...</div>}
+  {attendanceLoading && <div className="text-center">Loading...</div>}
         {error && <div className="text-center text-red-500">{error}</div>}
         <table className="w-full border text-sm">
           <thead>
@@ -79,18 +91,73 @@ export default function SummaryPage() {
             </tr>
           </thead>
           <tbody>
-            {data.map((row: any) => (
+            {data.map((row: any) => {
+                const formatDateOnly = (dateStr: string) =>
+                dateStr
+                    ? new Date(dateStr).toLocaleDateString("id-ID", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                    })
+                    : "";
+
+                const formatDate = (dateStr: string) =>
+                dateStr
+                    ? new Date(dateStr).toLocaleString("id-ID", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                    })
+                    : "";
+
+                return (
               <tr key={row.date}>
-                <td className="border p-2">{row.date}</td>
-                <td className="border p-2">{row.clockIn}</td>
-                <td className="border p-2">{row.clockOut}</td>
-                <td className="border p-2">{row.totalHours}</td>
+                <td className="border p-2">{formatDateOnly(row.date)}</td>
+                <td className="border p-2">{formatDate(row.clockIn)}</td>
+                <td className="border p-2">{formatDate(row.clockOut)}</td>
+                <td className="border p-2">{calculateTotalHours(row.clockIn, row.clockOut)}</td>
                 <td className="border p-2">{row.status}</td>
               </tr>
-            ))}
+            )
+            })}
           </tbody>
         </table>
-        <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded cursor-pointer">Export CSV</button>
+        {/* <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded cursor-pointer">Export CSV</button> */}
+        <button
+                  className="mt-4 bg-blue-600 text-white px-4 py-2 rounded cursor-pointer"
+                  onClick={() => {
+                     const csvRows = [
+                        ["Date", "Clock-in", "Clock-out", "Total-Hours", "Status"],
+                        ...data.map((row: any) => {
+                            const formatDate = (dateStr: string) =>
+                            dateStr ? new Date(dateStr).toLocaleString("id-ID", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit"
+                            }) : "";
+
+                            return [
+                            formatDate(row.date),
+                            formatDate(row.clockIn),
+                            formatDate(row.clockOut),
+                            calculateTotalHours(row.clockIn, row.clockOut),
+                            row.status,
+                            ];
+                        }),
+                        ];
+                    const csvContent = csvRows.map(r => r.join(";")).join("\n");
+                    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                    saveAs(blob, "attendance.csv");
+                  }}
+                >
+                  Export CSV
+                </button>
         {/* TODO: Export PDF */}
       </div>
     </div>

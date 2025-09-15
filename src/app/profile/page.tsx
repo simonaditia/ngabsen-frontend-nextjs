@@ -3,18 +3,21 @@ import { useProfile } from "@/hooks/useProfile";
 import { useState, useRef, useEffect } from "react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  // Proteksi: hanya staff yang bisa akses
+  const { user, loading } = useAuthGuard();
   useEffect(() => {
-    if (user && user.role !== "staff") {
-      router.replace("/admin");
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "staff") {
+        router.replace("/admin");
+      }
     }
-  }, [user, router]);
-  const { profile, loading, error } = useProfile();
+  }, [user, loading, router]);
+  const { profile, loading: profileLoading, error } = useProfile();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -33,7 +36,7 @@ export default function ProfilePage() {
 
   // Proteksi route: hanya staff yang bisa akses
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (profileLoading) return <div className="p-8 text-center">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   // Validasi sederhana

@@ -1,24 +1,30 @@
 "use client";
 import { useState } from "react";
+import { useEffect } from "react";
 import { saveAs } from "file-saver";
 import { useAdminEmployees } from "@/hooks/useAdminEmployees";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useRouter } from "next/navigation";
 
 export default function AdminAttendancePage() {
-  // Proteksi: hanya admin yang bisa akses
-  const { user } = require("@/contexts/AuthContext").useAuth();
-  const router = require("next/navigation").useRouter();
-  require("react").useEffect(() => {
-    if (user && user.role !== "admin") {
-      router.replace("/dashboard");
+  const router = useRouter();
+  const { user, loading } = useAuthGuard();
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "admin") {
+        router.replace("/dashboard");
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
   // ...existing code...
   const [startDate, setStartDate] = useState("2025-09-01");
   const [endDate, setEndDate] = useState("2025-09-30");
   const [employeeId, setEmployeeId] = useState("");
   const { employees, loading: loadingEmp } = useAdminEmployees();
-  const { data, loading, error } = useAdminAttendance(employeeId, startDate, endDate);
+  const { data, loading: attendanceLoading, error } = useAdminAttendance(employeeId, startDate, endDate);
 
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -48,7 +54,7 @@ export default function AdminAttendancePage() {
             ))}
           </select>
         </div>
-        {loading && <div className="text-center">Loading...</div>}
+  {attendanceLoading && <div className="text-center">Loading...</div>}
         {error && <div className="text-center text-red-500">{error}</div>}
         <table className="w-full border text-sm">
           <thead>

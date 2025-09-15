@@ -2,23 +2,26 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useTodayAttendance } from "@/hooks/useTodayAttendance";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useEffect } from "react";
 import { useState } from "react";
 import api from "@/services/api";
 
 export default function DashboardPage() {
-  const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
-  // Proteksi: hanya staff yang bisa akses
+  const { user, loading } = useAuthGuard();
   useEffect(() => {
-    if (user && user.role !== "staff") {
-      router.replace("/admin");
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "staff") {
+        router.replace("/admin");
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  // Proteksi: redirect ke login jika belum login
   const [refresh, setRefresh] = useState(0);
-  const { data, loading, error } = useTodayAttendance(refresh);
+  const { data, loading: attendanceLoading, error } = useTodayAttendance(refresh);
   const [loadingClock, setLoadingClock] = useState(false);
   const [status, setStatus] = useState("");
 
@@ -40,8 +43,9 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
-    logout();
-    router.replace("/login");
+  localStorage.removeItem("access_token");
+  // Bersihkan cache dan reload penuh
+  window.location.href = "/login";
   };
 
   const handleClockIn = async () => {
@@ -72,6 +76,7 @@ export default function DashboardPage() {
     }
   };
 
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-blue-600 text-white p-4 flex justify-between items-center">
@@ -89,7 +94,7 @@ export default function DashboardPage() {
         </div>
         <div className="mt-8 bg-white rounded shadow p-6 max-w-md mx-auto">
           <h3 className="text-lg font-bold mb-2">Attendance Hari Ini</h3>
-          {loading && <div>Loading...</div>}
+          {attendanceLoading && <div>Loading...</div>}
           {error && <div className="text-red-500">{error}</div>}
           <div className="mb-2">Tanggal: {formatHariTanggal(new Date())}</div>
           <div className="mb-2">Clock-in: {formatDateIndo(data?.clockIn)}</div>

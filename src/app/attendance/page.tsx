@@ -1,28 +1,31 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
 
 export default function AttendancePage() {
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  // Proteksi: hanya staff yang bisa akses
+  const { user, loading } = useAuthGuard();
   useEffect(() => {
-    if (user && user.role !== "staff") {
-      router.replace("/admin");
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (user.role !== "staff") {
+        router.replace("/admin");
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
   const [status, setStatus] = useState<string>("");
   const [clockedIn, setClockedIn] = useState(false);
   const [clockedOut, setClockedOut] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [clockLoading, setClockLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Proteksi: redirect ke login jika belum login
 
   const handleClockIn = async () => {
-    setLoading(true);
+    setClockLoading(true);
     setError("");
     try {
       await api.post("/attendance/clock-in");
@@ -31,12 +34,12 @@ export default function AttendancePage() {
     } catch {
       setError("Gagal Clock In");
     } finally {
-      setLoading(false);
+      setClockLoading(false);
     }
   };
 
   const handleClockOut = async () => {
-    setLoading(true);
+    setClockLoading(true);
     setError("");
     try {
       await api.post("/attendance/clock-out");
@@ -45,7 +48,7 @@ export default function AttendancePage() {
     } catch {
       setError("Gagal Clock Out");
     } finally {
-      setLoading(false);
+      setClockLoading(false);
     }
   };
 
@@ -59,16 +62,16 @@ export default function AttendancePage() {
           <button
             className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50 cursor-pointer"
             onClick={handleClockIn}
-            disabled={clockedIn || loading}
+            disabled={clockedIn || clockLoading}
           >
-            {loading ? "Loading..." : "Clock In"}
+            {clockLoading ? "Loading..." : "Clock In"}
           </button>
           <button
             className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50 cursor-pointer"
             onClick={handleClockOut}
-            disabled={clockedOut || loading}
+            disabled={clockedOut || clockLoading}
           >
-            {loading ? "Loading..." : "Clock Out"}
+            {clockLoading ? "Loading..." : "Clock Out"}
           </button>
         </div>
         {status && <div className="mt-4 text-blue-600 font-semibold">{status}</div>}
