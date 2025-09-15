@@ -9,6 +9,36 @@ import { useRouter } from "next/navigation";
 import { requestDeviceToken, listenFCMMessages } from "@/firebase/firebaseInit";
 
 export default function AdminDashboard() {
+  type Notification = {
+    id: number;
+    title: string;
+    message: string;
+    targetId: number;
+    createdAt: string;
+    read: boolean;
+  };
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // ...existing code...
+  useEffect(() => {
+    async function fetchNotifications() {
+      const accessToken = localStorage.getItem("access_token");
+      if (!accessToken) return;
+      try {
+        const res = await fetch("http://localhost:3000/admin/notifications", {
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data);
+        }
+      } catch (err) {
+        // handle error
+      }
+    }
+    fetchNotifications();
+  }, []);
   const [notif, setNotif] = useState("");
   useEffect(() => {
     async function registerDeviceToken() {
@@ -79,19 +109,26 @@ export default function AdminDashboard() {
         <button className="bg-red-600 px-3 py-1 rounded text-white" onClick={handleLogout}>Logout</button>
       </header>
       <main className="flex-1 p-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-4 rounded shadow">
-            Total Employees: {loadingEmp ? "..." : employees.length}
-          </div>
-          <div className="bg-white p-4 rounded shadow">
-            Today's Attendance: {loadingAtt ? "..." : attendance.length}
-          </div>
-          <div className="bg-white p-4 rounded shadow">Pending Updates: {/* TODO */}</div>
-        </div>
-        <div className="bg-white p-4 rounded shadow mb-4">Real-time Notifications Panel {/* TODO: Firebase */}</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <a href="/admin/employees" className="bg-blue-50 p-4 rounded shadow hover:bg-blue-100">Employee Management</a>
           <a href="/admin/attendance" className="bg-blue-50 p-4 rounded shadow hover:bg-blue-100">Attendance Monitor</a>
+        </div>
+        <div className="bg-white p-4 rounded shadow mb-4">
+          <div className="font-bold mb-2">Real-time Notifications Panel</div>
+          {notifications.length === 0 ? (
+            <div className="text-gray-500">Belum ada notifikasi.</div>
+          ) : (
+            <ul className="divide-y">
+              {notifications.map((notif) => (
+                <li key={notif.id} className="py-2">
+                  <div className="font-semibold text-blue-700">{notif.title}</div>
+                  <div className="text-gray-700">{notif.message}</div>
+                  <div className="text-xs text-gray-400">{new Date(notif.createdAt).toLocaleString()}</div>
+                  {!notif.read && <span className="text-xs text-green-600 ml-2">(unread)</span>}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </main>
     </div>
