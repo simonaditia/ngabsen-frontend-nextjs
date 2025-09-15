@@ -8,6 +8,12 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  // Proteksi: hanya staff yang bisa akses
+  useEffect(() => {
+    if (user && user.role !== "staff") {
+      router.replace("/admin");
+    }
+  }, [user, router]);
   const { profile, loading, error } = useProfile();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");

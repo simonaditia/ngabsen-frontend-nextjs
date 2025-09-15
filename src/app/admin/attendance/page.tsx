@@ -5,6 +5,14 @@ import { useAdminEmployees } from "@/hooks/useAdminEmployees";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
 
 export default function AdminAttendancePage() {
+  // Proteksi: hanya admin yang bisa akses
+  const { user } = require("@/contexts/AuthContext").useAuth();
+  const router = require("next/navigation").useRouter();
+  require("react").useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
   // ...existing code...
   const [startDate, setStartDate] = useState("2025-09-01");
   const [endDate, setEndDate] = useState("2025-09-30");

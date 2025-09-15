@@ -9,6 +9,12 @@ import { useRouter } from "next/navigation";
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  // Proteksi: hanya admin yang bisa akses
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
 
   const { employees, loading: loadingEmp } = useAdminEmployees();
   const today = new Date();

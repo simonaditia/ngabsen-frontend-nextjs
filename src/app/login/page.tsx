@@ -21,13 +21,13 @@ export default function LoginPage() {
     }
   };
 
-  useEffect(() => {
-    // Jika sudah login, redirect ke dashboard/admin
-    if (user) {
-      if (user.role === "admin") router.replace("/admin");
-      else router.replace("/dashboard");
-    }
-  }, [user, router]);
+    // Penjagaan: jika sudah login, redirect ke dashboard/admin
+    useEffect(() => {
+      if (user) {
+        if (user.role === "admin") router.replace("/admin");
+        else router.replace("/dashboard");
+      }
+    }, [user, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

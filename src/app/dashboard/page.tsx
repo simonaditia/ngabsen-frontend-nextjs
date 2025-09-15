@@ -9,6 +9,12 @@ import api from "@/services/api";
 export default function DashboardPage() {
   const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
+  // Proteksi: hanya staff yang bisa akses
+  useEffect(() => {
+    if (user && user.role !== "staff") {
+      router.replace("/admin");
+    }
+  }, [user, router]);
 
   // Proteksi: redirect ke login jika belum login
   const [refresh, setRefresh] = useState(0);

@@ -18,6 +18,12 @@ const dummySummary = [
 export default function SummaryPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  // Proteksi: hanya staff yang bisa akses
+  useEffect(() => {
+    if (user && user.role !== "staff") {
+      router.replace("/admin");
+    }
+  }, [user, router]);
   console.log("user before: ", user)
   console.log("user after: ", user)
   

@@ -7,6 +7,12 @@ import api from "@/services/api";
 export default function AttendancePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  // Proteksi: hanya staff yang bisa akses
+  useEffect(() => {
+    if (user && user.role !== "staff") {
+      router.replace("/admin");
+    }
+  }, [user, router]);
   const [status, setStatus] = useState<string>("");
   const [clockedIn, setClockedIn] = useState(false);
   const [clockedOut, setClockedOut] = useState(false);

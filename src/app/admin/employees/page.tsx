@@ -5,6 +5,14 @@ import { useEffect } from "react";
 import api from "@/services/api";
 
 export default function EmployeesPage() {
+  // Proteksi: hanya admin yang bisa akses
+  const { user } = require("@/contexts/AuthContext").useAuth();
+  const router = require("next/navigation").useRouter();
+  require("react").useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
   // ...existing code...
   const [refresh, setRefresh] = useState(0);
   const { employees, loading, error } = useAdminEmployees(refresh);
